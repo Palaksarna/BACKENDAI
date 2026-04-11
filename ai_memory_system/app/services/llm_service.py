@@ -1,5 +1,9 @@
 import os
+from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
+
+# Load local .env values before resolving API credentials.
+load_dotenv()
 
 api_key = os.getenv("HUGGINGFACE_API_KEY")
 if not api_key:
