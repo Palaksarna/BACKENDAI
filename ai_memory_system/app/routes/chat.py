@@ -1,6 +1,14 @@
+import json
+
 from fastapi import APIRouter
 from ..models.schema import ChatRequest
-from ..services.memory_service import store_memory, retrieve_memory, forget_memory
+from ..services.memory_service import (
+    forget_memory,
+    get_neural_context,
+    process_memory_buffer,
+    retrieve_memory,
+    store_memory,
+)
 from ..services.llm_service import generate_response
 
 router = APIRouter()
@@ -18,13 +26,19 @@ def chat(req: ChatRequest):
 
     # retrieve memory
     memories = retrieve_memory(user_id, message)
+    promoted_memory_ids = process_memory_buffer()
+    neural_context = get_neural_context(message)
 
     memory_text = "\n".join([m[0] for m in memories])
+    neural_text = json.dumps(neural_context)
 
     # construct prompt
     prompt = f"""
     User profile:
     {memory_text}
+
+    Neural layer context:
+    {neural_text}
 
     User question:
     {message}
@@ -38,5 +52,7 @@ def chat(req: ChatRequest):
     return {
         "response": response,
         "stored_memory": stored_items,
-        "retrieved_memory": [m[0] for m in memories]
+        "retrieved_memory": [m[0] for m in memories],
+        "promoted_memory_ids": promoted_memory_ids,
+        "neural_context": neural_context,
     }

@@ -5,3 +5,4 @@ huggingface_hub
 sentence-transformers
 pydantic
 python-dotenv
+torch
