@@ -1,14 +1,13 @@
 from pydantic import BaseModel
 
+
 class ChatRequest(BaseModel):
-    user_id: str
     message: str
 
 
 class ChatResponse(BaseModel):
     response: str
-    stored_memory: list
-    retrieved_memory: list
+    retrieved_context: list[str]
 
 
 class SignupRequest(BaseModel):

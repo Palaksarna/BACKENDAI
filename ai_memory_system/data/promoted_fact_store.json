@@ -1,0 +1,29 @@
+[
+  {
+    "key": "name",
+    "value": "Alex",
+    "normalized_value": "alex",
+    "frequency": 2,
+    "first_seen": "2026-04-20T17:32:36.623681+00:00",
+    "last_seen": "2026-04-20T17:40:56.799662+00:00",
+    "promoted": true
+  },
+  {
+    "key": "age",
+    "value": 23,
+    "normalized_value": "23",
+    "frequency": 2,
+    "first_seen": "2026-04-20T17:33:21.729464+00:00",
+    "last_seen": "2026-04-20T17:39:37.764037+00:00",
+    "promoted": true
+  },
+  {
+    "key": "interest",
+    "value": "Python",
+    "normalized_value": "python",
+    "frequency": 2,
+    "first_seen": "2026-04-20T17:36:07.766430+00:00",
+    "last_seen": "2026-04-20T17:40:21.998892+00:00",
+    "promoted": true
+  }
+]

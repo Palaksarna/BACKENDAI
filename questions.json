@@ -1,0 +1,55 @@
+[
+  {"question": "What is machine learning?", "expected_answer": "Machine learning is a field of AI where systems learn patterns from data."},
+  {"question": "What is overfitting?", "expected_answer": "Overfitting occurs when a model learns noise instead of general patterns."},
+  {"question": "What is underfitting?", "expected_answer": "Underfitting happens when a model is too simple to capture patterns."},
+  {"question": "What is a neural network?", "expected_answer": "A neural network is a model inspired by the human brain with layers of neurons."},
+  {"question": "What is deep learning?", "expected_answer": "Deep learning is a subset of machine learning using multi-layer neural networks."},
+
+  {"question": "What is RAG in AI?", "expected_answer": "RAG stands for Retrieval Augmented Generation combining retrieval with LLMs."},
+  {"question": "What does a vector database do?", "expected_answer": "A vector database stores embeddings and enables similarity search."},
+  {"question": "What is an embedding?", "expected_answer": "An embedding is a numerical representation of text capturing meaning."},
+  {"question": "What is cosine similarity?", "expected_answer": "Cosine similarity measures similarity between two vectors."},
+  {"question": "Why is retrieval important in RAG?", "expected_answer": "Retrieval provides relevant context to improve LLM responses."},
+
+  {"question": "User name is Alex. What is the user's name?", "expected_answer": "The user's name is Alex."},
+  {"question": "User likes Python. What language does the user prefer?", "expected_answer": "The user prefers Python."},
+  {"question": "User lives in Delhi. Where does the user live?", "expected_answer": "The user lives in Delhi."},
+  {"question": "User is an AI student. What is the user studying?", "expected_answer": "The user is studying AI."},
+  {"question": "User prefers morning study. When does the user study?", "expected_answer": "The user studies in the morning."},
+
+  {"question": "What is machine learning?", "expected_answer": "Machine learning is a field of AI where systems learn patterns from data."},
+  {"question": "What is overfitting?", "expected_answer": "Overfitting occurs when a model learns noise instead of general patterns."},
+  {"question": "What is deep learning?", "expected_answer": "Deep learning is a subset of machine learning using multi-layer neural networks."},
+  {"question": "What is an embedding?", "expected_answer": "An embedding is a numerical representation of text capturing meaning."},
+  {"question": "What is cosine similarity?", "expected_answer": "Cosine similarity measures similarity between two vectors."},
+
+  {"question": "User name is Alex. What is the user's name?", "expected_answer": "The user's name is Alex."},
+  {"question": "User likes Python. What language does the user prefer?", "expected_answer": "The user prefers Python."},
+  {"question": "User lives in Delhi. Where does the user live?", "expected_answer": "The user lives in Delhi."},
+  {"question": "User prefers morning study. When does the user study?", "expected_answer": "The user studies in the morning."},
+  {"question": "User is an AI student. What is the user studying?", "expected_answer": "The user is studying AI."},
+
+  {"question": "What is a vector database?", "expected_answer": "A vector database stores embeddings for similarity search."},
+  {"question": "What is retrieval in RAG?", "expected_answer": "Retrieval fetches relevant documents for generation."},
+  {"question": "What is a neural network?", "expected_answer": "A neural network is a model inspired by the human brain."},
+  {"question": "What is deep learning?", "expected_answer": "Deep learning uses multiple layers in neural networks."},
+  {"question": "What is machine learning?", "expected_answer": "Machine learning allows systems to learn from data."},
+
+  {"question": "User likes Python. What language does the user prefer?", "expected_answer": "The user prefers Python."},
+  {"question": "User lives in Delhi. Where does the user live?", "expected_answer": "The user lives in Delhi."},
+  {"question": "User name is Alex. What is the user's name?", "expected_answer": "The user's name is Alex."},
+  {"question": "User prefers morning study. When does the user study?", "expected_answer": "The user studies in the morning."},
+  {"question": "User is an AI student. What is the user studying?", "expected_answer": "The user is studying AI."},
+
+  {"question": "What is overfitting?", "expected_answer": "Overfitting occurs when a model learns noise."},
+  {"question": "What is underfitting?", "expected_answer": "Underfitting occurs when the model is too simple."},
+  {"question": "What is cosine similarity?", "expected_answer": "Cosine similarity measures angle between vectors."},
+  {"question": "What is embedding?", "expected_answer": "Embedding represents text numerically."},
+  {"question": "What is RAG?", "expected_answer": "RAG combines retrieval with generation."},
+
+  {"question": "User likes Python. What language does the user prefer?", "expected_answer": "The user prefers Python."},
+  {"question": "User name is Alex. What is the user's name?", "expected_answer": "The user's name is Alex."},
+  {"question": "User lives in Delhi. Where does the user live?", "expected_answer": "The user lives in Delhi."},
+  {"question": "User is an AI student. What is the user studying?", "expected_answer": "The user is studying AI."},
+  {"question": "User prefers morning study. When does the user study?", "expected_answer": "The user studies in the morning."}
+]
