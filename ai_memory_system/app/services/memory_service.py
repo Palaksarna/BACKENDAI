@@ -5,7 +5,13 @@ import time
 
 from ..db.chroma_client import collection, ensure_knowledge_base
 from .embedding import get_embedding
-from .fact_memory import extract_facts, update_fact_store
+from .fact_memory import (
+    extract_facts,
+    update_fact_store,
+    promote_used_facts_for_neural_training,
+    remove_archived_facts_from_promoted,
+)
+from .forgetting_agent import ACTIVE, ARCHIVED, PASSIVE, MemoryForgettingAgent
 from ..ml.data_logger import log_retrieval
 from ..ml.memory_model import predict_importance, load_model, train_from_buffer
 
@@ -224,6 +230,23 @@ def _is_personal_memory(metadata: Dict[str, Any], memory_type: str) -> bool:
     )
 
 
+def _normalize_fact_output(document: Any, metadata: Dict[str, Any]) -> str:
+    raw_document = _normalize_text(str(document))
+    if not raw_document:
+        return ""
+
+    fact_value = metadata.get("fact_value")
+    if fact_value not in {None, ""} and str(metadata.get("tag", "")).strip() == "fact_candidate":
+        return _normalize_text(str(fact_value))
+
+    if str(metadata.get("tag", "")).strip() == "fact_candidate" or _is_personal_memory(metadata, _classify_memory_type(metadata, raw_document)):
+        prefix_match = re.match(r"^[A-Za-z][A-Za-z _-]{0,40}:\s*(.+)$", raw_document)
+        if prefix_match:
+            return _normalize_text(prefix_match.group(1))
+
+    return raw_document
+
+
 def _tokenize_for_diversity(text: str) -> set[str]:
     normalized = _normalize_text(text).lower()
     return set(re.findall(r"[a-z0-9']+", normalized))
@@ -315,7 +338,7 @@ def _cached_fact_records_for_query(query_intents: Dict[str, bool], now: float) -
         records.append(
             {
                 "doc_id": f"short-term-cache-{index}",
-                "document": document,
+                "document": _normalize_fact_output(document, metadata),
                 "metadata": metadata,
                 "frequency": 0,
                 "similarity": 1.0,
@@ -408,7 +431,7 @@ def check_and_train() -> bool:
         return False
 
 
-def retrieve_relevant_documents(query: str, limit: int = 5) -> List[str]:
+def retrieve_relevant_documents(query: str, limit: int = 5, include_archived: bool = False) -> List[str]:
     if not query or not query.strip():
         return []
 
@@ -493,12 +516,14 @@ def retrieve_relevant_documents(query: str, limit: int = 5) -> List[str]:
             {
                 "doc_id": doc_id,
                 "document": document,
+                "text": document,
                 "metadata": metadata,
                 "frequency": frequency,
                 "similarity": similarity,
                 "norm_freq": normalized_frequency,
                 "norm_recency": normalized_recency,
                 "importance": bounded_importance,
+                "importance_score": bounded_importance,
                 "final_score": max(0.0, min(1.0, float(final_score))),
                 "memory_type": memory_type,
                 "is_personal_memory": is_personal_memory,
@@ -507,74 +532,120 @@ def retrieve_relevant_documents(query: str, limit: int = 5) -> List[str]:
             }
         )
 
-    selected_records_map: Dict[str, Dict[str, Any]] = {}
-
-    def add_selected(record: Dict[str, Any]) -> None:
-        doc_id = record["doc_id"]
-        if doc_id:
-            selected_records_map[doc_id] = record
-
-    # User-specific memory must always be preserved.
-    forced_user_memory = False
+    # Increased retention: higher weight on recency for new facts, lower importance weight
+    # w1=importance (0.30), w2=frequency (0.10), w3=recency (0.40), w4=semantic (0.20)
+    forgetting_agent = MemoryForgettingAgent(w1=0.30, w2=0.10, w3=0.40, w4=0.20)
+    memory_items: List[Dict[str, Any]] = []
     for record in candidate_records:
-        if record["force_user_identity"] or record["is_personal_memory"] or record["memory_type"] == "user_fact":
-            add_selected(record)
-            forced_user_memory = True
+        metadata = record["metadata"]
+        # Extract key from fact_key (Chroma fact candidates) or key field (general memories)
+        extracted_key = str(metadata.get("fact_key", metadata.get("key", ""))).strip().lower()
+        memory_items.append(
+            {
+                "id": record["doc_id"],
+                "text": record["document"],
+                "importance_score": record["importance"],
+                "frequency": record["frequency"],
+                "last_accessed": _to_float(metadata.get("last_used"), default=0.0),
+                "created_at": _to_float(metadata.get("created_at"), default=now),
+                "type": str(metadata.get("type", record["memory_type"] or "general")),
+                "key": extracted_key,
+                "semantic_relevance": record["similarity"],
+                "memory_state": str(metadata.get("memory_state", PASSIVE)).upper(),
+                "metadata": metadata,
+            }
+        )
 
-    if forced_user_memory:
-        print("user_memory_forced_inclusion")
+    evaluated_memories = forgetting_agent.evaluate_memory(memory_items)
+    forgetting_agent.update_memory_states()
+    archived_memories = forgetting_agent.archive_low_value_memories(compress=True)
+    state_counts = forgetting_agent.get_state_counts()
+    print(
+        "memory_state_counts "
+        f"ACTIVE={state_counts.get(ACTIVE, 0)} "
+        f"PASSIVE={state_counts.get(PASSIVE, 0)} "
+        f"ARCHIVED={state_counts.get(ARCHIVED, 0)}"
+    )
+    if archived_memories:
+        print(f"archived_memories_count={len(archived_memories)}")
+        remove_archived_facts_from_promoted(archived_memories)
 
-    # Top-K similarity safety net: always include at least the top 3 by similarity.
-    top_similarity_candidates = sorted(candidate_records, key=lambda r: r["similarity"], reverse=True)[:TOPK_SIMILARITY_SAFETY]
-    for record in top_similarity_candidates:
-        add_selected(record)
+    evaluated_by_id = {
+        str(memory.get("id", "")): memory
+        for memory in evaluated_memories
+        if memory.get("id")
+    }
 
-    importance_scores = [record["importance"] for record in candidate_records]
-    dynamic_threshold = (sum(importance_scores) / len(importance_scores) - DYNAMIC_THRESHOLD_OFFSET) if importance_scores else 0.0
-    dynamic_threshold = max(0.0, min(1.0, dynamic_threshold))
-
-    neural_candidates = []
     for record in candidate_records:
-        if record["is_personal_memory"]:
+        evaluated = evaluated_by_id.get(str(record["doc_id"]))
+        if not evaluated:
+            record["memory_state"] = PASSIVE
             continue
-        min_required = dynamic_threshold - 0.05 if record["memory_type"] == "preference" else dynamic_threshold
-        if record["importance"] >= max(0.0, min_required):
-            neural_candidates.append(record)
+        record["memory_state"] = str(evaluated.get("memory_state", PASSIVE)).upper()
+        record["final_score"] = max(0.0, min(1.0, _to_float(evaluated.get("final_score"), default=record["final_score"])))
+        record["importance"] = max(0.0, min(1.0, _to_float(evaluated.get("importance_score"), default=record["importance"])))
+        if evaluated.get("archived_summary"):
+            record["archived_summary"] = str(evaluated.get("archived_summary"))
 
-    used_neural_selection = bool(neural_candidates)
-    print(f"used_neural_selection={used_neural_selection}")
-
-    top_neural_candidates = sorted(neural_candidates, key=lambda r: r["final_score"], reverse=True)[:max_context]
-    for record in top_neural_candidates:
-        add_selected(record)
-
-    # Mixed queries should include at least one memory chunk.
-    if query_intents["mixed_query"] and not any(record["is_personal_memory"] for record in selected_records_map.values()):
-        user_fact_candidates = [record for record in candidate_records if record["is_personal_memory"]]
-        if user_fact_candidates:
-            add_selected(sorted(user_fact_candidates, key=lambda r: r["similarity"], reverse=True)[0])
-
-    # Consistency fix: include cached personal facts when retrieval misses them.
-    cached_records = _cached_fact_records_for_query(query_intents, now)
-    if cached_records and not any(record["is_personal_memory"] for record in selected_records_map.values()):
-        for record in cached_records:
-            add_selected(record)
+    active_candidates = [record for record in candidate_records if record.get("memory_state") == ACTIVE]
+    passive_candidates = [record for record in candidate_records if record.get("memory_state") == PASSIVE]
+    archived_candidates = [record for record in candidate_records if record.get("memory_state") == ARCHIVED]
 
     selected_records = sorted(
-        selected_records_map.values(),
+        active_candidates,
         key=lambda r: (r["is_personal_memory"], r["final_score"], r["similarity"]),
         reverse=True,
     )[:max_context]
 
+    if len(selected_records) < max_context:
+        already_selected = {record["doc_id"] for record in selected_records}
+        passive_fill = [
+            record
+            for record in sorted(passive_candidates, key=lambda r: (r["final_score"], r["similarity"]), reverse=True)
+            if record["doc_id"] not in already_selected
+        ]
+        selected_records.extend(passive_fill[: max_context - len(selected_records)])
+
+    if include_archived and len(selected_records) < max_context:
+        already_selected = {record["doc_id"] for record in selected_records}
+        archived_fill = [
+            record
+            for record in sorted(archived_candidates, key=lambda r: (r["final_score"], r["similarity"]), reverse=True)
+            if record["doc_id"] not in already_selected
+        ]
+        selected_records.extend(archived_fill[: max_context - len(selected_records)])
+
+    # Mixed queries should include at least one personal memory when possible.
+    if query_intents["mixed_query"] and not any(record["is_personal_memory"] for record in selected_records):
+        personal_candidates = [record for record in active_candidates + passive_candidates if record["is_personal_memory"]]
+        if personal_candidates:
+            selected_records = [
+                sorted(personal_candidates, key=lambda r: (r["final_score"], r["similarity"]), reverse=True)[0]
+            ] + selected_records
+            selected_records = selected_records[:max_context]
+
+    # Consistency fix: include cached personal facts when retrieval misses them.
+    cached_records = _cached_fact_records_for_query(query_intents, now)
+    if cached_records and not any(record["is_personal_memory"] for record in selected_records):
+        selected_records.extend(cached_records)
+        selected_records = selected_records[:max_context]
+
     if not selected_records:
         print("used_similarity_fallback")
-        fallback_candidates = sorted(candidate_records, key=lambda r: r["similarity"], reverse=True)[:max_context]
+        fallback_pool = active_candidates + passive_candidates
+        if include_archived:
+            fallback_pool += archived_candidates
+        fallback_candidates = sorted(fallback_pool, key=lambda r: r["similarity"], reverse=True)[:max_context]
         selected_records = fallback_candidates
 
     if not selected_records and cached_records:
         selected_records = cached_records[:max_context]
 
-    unique_documents = [record["document"].strip() for record in selected_records if record["document"].strip()]
+    unique_documents = [
+        _normalize_fact_output(record["document"], record["metadata"]).strip()
+        for record in selected_records
+        if _normalize_fact_output(record["document"], record["metadata"]).strip()
+    ]
     print(f"Selected chunks: {len(selected_records)}")
 
     for record in selected_records:
@@ -587,12 +658,30 @@ def retrieve_relevant_documents(query: str, limit: int = 5) -> List[str]:
 
     selected_doc_ids = {record["doc_id"] for record in selected_records if record.get("doc_id")}
 
-    if selected_records:
-        update_ids = []
-        update_metadatas = []
+    metadata_updates: Dict[str, Dict[str, Any]] = {}
+    for record in candidate_records:
+        doc_id = record["doc_id"]
+        if str(doc_id).startswith("short-term-cache-"):
+            continue
 
+        metadata = record["metadata"]
+        merged_metadata = {
+            **metadata,
+            "memory_state": record.get("memory_state", PASSIVE),
+            "importance_score": max(0.0, min(1.0, _to_float(record.get("importance"), default=0.0))),
+            "final_score": max(0.0, min(1.0, _to_float(record.get("final_score"), default=0.0))),
+            "last_evaluated": now,
+            "created_at": _to_float(metadata.get("created_at"), default=now),
+            "type": str(metadata.get("type", record.get("memory_type", "general"))),
+        }
+        if record.get("archived_summary"):
+            merged_metadata["archived_summary"] = str(record.get("archived_summary"))
+        metadata_updates[str(doc_id)] = _sanitize_metadata(merged_metadata)
+
+    if selected_records:
         update_time = time.time()
         updates_done = 0
+        used_fact_candidates: List[Dict[str, Any]] = []
         for record in selected_records:
             doc_id = record["doc_id"]
             metadata = record["metadata"]
@@ -603,17 +692,33 @@ def retrieve_relevant_documents(query: str, limit: int = 5) -> List[str]:
             importance = record["importance"]
             document = record["document"]
 
-            # Buffer fill is independent from metadata updates to improve training cadence.
-            add_to_buffer(
-                frequency=norm_freq,
-                recency=norm_recency,
-                similarity=similarity,
-                importance=importance,
-                text=document,
-            )
+            if record.get("memory_state") == ACTIVE:
+                add_to_buffer(
+                    frequency=norm_freq,
+                    recency=norm_recency,
+                    similarity=similarity,
+                    importance=importance,
+                    text=document,
+                )
 
             if str(doc_id).startswith("short-term-cache-"):
                 continue
+
+            existing_metadata = dict(metadata_updates.get(str(doc_id), metadata))
+            usage_count = _to_int(existing_metadata.get("usage_count"), default=0) + 1
+            existing_metadata["usage_count"] = usage_count
+            existing_metadata["last_seen"] = update_time
+            metadata_updates[str(doc_id)] = _sanitize_metadata(existing_metadata)
+
+            if str(existing_metadata.get("tag", "")).strip() == "fact_candidate":
+                used_fact_candidates.append(
+                    {
+                        "key": existing_metadata.get("fact_key"),
+                        "value": existing_metadata.get("fact_value"),
+                        "usage_count": usage_count,
+                        "last_seen": update_time,
+                    }
+                )
 
             if updates_done >= MAX_MEMORY_UPDATES_PER_QUERY:
                 break
@@ -624,32 +729,37 @@ def retrieve_relevant_documents(query: str, limit: int = 5) -> List[str]:
             new_last_used = update_time
             new_score = _memory_score(new_frequency, new_last_used, update_time)
 
+            existing_metadata = dict(metadata_updates.get(str(doc_id), metadata))
             merged_metadata = {
-                **metadata,
+                **existing_metadata,
                 "frequency": new_frequency,
                 "last_used": new_last_used,
                 "score": new_score,
             }
 
-            update_ids.append(doc_id)
-            update_metadatas.append(_sanitize_metadata(merged_metadata))
-            
+            metadata_updates[str(doc_id)] = _sanitize_metadata(merged_metadata)
+
             # Log retrieval with normalized features and importance (1 = high confidence retrieval)
             normalized_frequency = _normalize_frequency(new_frequency)
             normalized_recency = _recency_component(new_last_used, update_time)
-            importance_label = 1  # Retrieved chunks are labeled as important
-            
+            importance_label = 1
+
             log_retrieval(
                 frequency=normalized_frequency,
                 recency=normalized_recency,
                 similarity=similarity,
                 importance=importance_label,
             )
-            
+
             updates_done += 1
 
-        if update_ids:
-            collection.update(ids=update_ids, metadatas=update_metadatas)
+        if used_fact_candidates:
+            promote_used_facts_for_neural_training(used_fact_candidates)
+
+    if metadata_updates:
+        update_ids = list(metadata_updates.keys())
+        update_metadatas = [metadata_updates[doc_id] for doc_id in update_ids]
+        collection.update(ids=update_ids, metadatas=update_metadatas)
 
     # Training labels: 1 for chunks used in final context, 0 for retrieved but unused chunks.
     for record in candidate_records:

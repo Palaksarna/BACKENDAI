@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+chromadb
+huggingface_hub
+pydantic
+python-dotenv
+torch

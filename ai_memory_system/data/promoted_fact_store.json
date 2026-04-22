@@ -1,29 +1,56 @@
 [
   {
-    "key": "name",
-    "value": "Alex",
-    "normalized_value": "alex",
-    "frequency": 2,
-    "first_seen": "2026-04-20T17:32:36.623681+00:00",
-    "last_seen": "2026-04-20T17:40:56.799662+00:00",
+    "key": "age",
+    "value": "I am 23 years old",
+    "normalized_value": "23",
+    "frequency": 27,
+    "first_seen": "2026-04-21T19:48:59.288942+00:00",
+    "last_seen": 1776801828.0795963,
     "promoted": true
   },
   {
-    "key": "age",
-    "value": 23,
-    "normalized_value": "23",
-    "frequency": 2,
-    "first_seen": "2026-04-20T17:33:21.729464+00:00",
-    "last_seen": "2026-04-20T17:39:37.764037+00:00",
+    "key": "name",
+    "value": "My name is Alex",
+    "normalized_value": "my name is alex",
+    "frequency": 26,
+    "first_seen": "2026-04-21T19:49:15.592517+00:00",
+    "last_seen": 1776801828.0795963,
+    "promoted": true
+  },
+  {
+    "key": "location",
+    "value": "I Live in Delhi",
+    "normalized_value": "i live in delhi",
+    "frequency": 25,
+    "first_seen": "2026-04-21T19:49:46.807115+00:00",
+    "last_seen": 1776801828.0795963,
     "promoted": true
   },
   {
     "key": "interest",
-    "value": "Python",
-    "normalized_value": "python",
-    "frequency": 2,
-    "first_seen": "2026-04-20T17:36:07.766430+00:00",
-    "last_seen": "2026-04-20T17:40:21.998892+00:00",
+    "value": "I like Python",
+    "normalized_value": "i like python",
+    "frequency": 23,
+    "first_seen": "2026-04-21T19:50:22.215459+00:00",
+    "last_seen": 1776801828.0795963,
+    "promoted": true
+  },
+  {
+    "key": "interest",
+    "value": "I like AI projects",
+    "normalized_value": "i like ai projects",
+    "frequency": 7,
+    "first_seen": "2026-04-21T19:50:22.215459+00:00",
+    "last_seen": 1776801524.6351733,
+    "promoted": true
+  },
+  {
+    "key": "goal",
+    "value": "I want to become an AI engineer",
+    "normalized_value": "i want to become an ai engineer",
+    "frequency": 18,
+    "first_seen": "2026-04-21T19:53:25.366754+00:00",
+    "last_seen": 1776801828.0795963,
     "promoted": true
   }
 ]

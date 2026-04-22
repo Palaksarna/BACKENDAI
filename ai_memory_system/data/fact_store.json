@@ -1,47 +1,65 @@
 [
   {
     "key": "name",
-    "value": "Alex",
-    "normalized_value": "alex",
+    "value": "My name is Alex",
+    "normalized_value": "my name is alex",
+    "frequency": 4,
+    "first_seen": "2026-04-21T19:42:52.041687+00:00",
+    "last_seen": "2026-04-21T19:52:48.544467+00:00",
+    "promoted": false
+  },
+  {
+    "key": "location",
+    "value": "I Live in Delhi",
+    "normalized_value": "i live in delhi",
     "frequency": 2,
-    "first_seen": "2026-04-20T17:32:36.623681+00:00",
-    "last_seen": "2026-04-20T17:40:56.799662+00:00",
-    "promoted": true
+    "first_seen": "2026-04-21T19:42:52.041687+00:00",
+    "last_seen": "2026-04-21T19:49:15.567857+00:00",
+    "promoted": false
   },
   {
     "key": "age",
-    "value": 23,
+    "value": "I am 23 years old",
     "normalized_value": "23",
     "frequency": 2,
-    "first_seen": "2026-04-20T17:33:21.729464+00:00",
-    "last_seen": "2026-04-20T17:39:37.764037+00:00",
-    "promoted": true
-  },
-  {
-    "key": "interest",
-    "value": "Python",
-    "normalized_value": "python",
-    "frequency": 2,
-    "first_seen": "2026-04-20T17:36:07.766430+00:00",
-    "last_seen": "2026-04-20T17:40:21.998892+00:00",
-    "promoted": true
-  },
-  {
-    "key": "interest",
-    "value": "AI projects",
-    "normalized_value": "ai projects",
-    "frequency": 1,
-    "first_seen": "2026-04-20T17:36:07.766430+00:00",
-    "last_seen": "2026-04-20T17:36:07.766430+00:00",
+    "first_seen": "2026-04-21T19:48:37.957414+00:00",
+    "last_seen": "2026-04-21T19:51:40.129014+00:00",
     "promoted": false
   },
   {
     "key": "interest",
-    "value": "PyTorch",
-    "normalized_value": "pytorch",
+    "value": "I like Python",
+    "normalized_value": "i like python",
+    "frequency": 2,
+    "first_seen": "2026-04-21T19:49:46.746857+00:00",
+    "last_seen": "2026-04-21T19:52:13.515833+00:00",
+    "promoted": false
+  },
+  {
+    "key": "interest",
+    "value": "I like AI projects",
+    "normalized_value": "i like ai projects",
     "frequency": 1,
-    "first_seen": "2026-04-20T17:36:57.843328+00:00",
-    "last_seen": "2026-04-20T17:36:57.843328+00:00",
+    "first_seen": "2026-04-21T19:49:46.746857+00:00",
+    "last_seen": "2026-04-21T19:49:46.746857+00:00",
+    "promoted": false
+  },
+  {
+    "key": "interest",
+    "value": "My favorite framework is PyTorch",
+    "normalized_value": "my favorite framework is pytorch",
+    "frequency": 1,
+    "first_seen": "2026-04-21T19:50:22.128227+00:00",
+    "last_seen": "2026-04-21T19:50:22.128227+00:00",
+    "promoted": false
+  },
+  {
+    "key": "goal",
+    "value": "I want to become an AI engineer",
+    "normalized_value": "i want to become an ai engineer",
+    "frequency": 1,
+    "first_seen": "2026-04-21T19:50:56.345279+00:00",
+    "last_seen": "2026-04-21T19:50:56.345279+00:00",
     "promoted": false
   }
 ]
