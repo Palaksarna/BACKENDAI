@@ -22,7 +22,7 @@ def generate_response(prompt):
         completion = client.chat.completions.create(
             model=model_name,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": "You are a helpful assistant. Provide concise and short answers."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.5,
